@@ -1,5 +1,11 @@
 Revision history for Perl extension String::CaseProfile.
 
+
+0.03  December 24, 2007
+
+    * Added more tests
+    * Fixed some documentation errors
+
 0.02  December 22, 2007
     
     * Fixed some indentation problems

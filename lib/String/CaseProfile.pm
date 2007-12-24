@@ -11,7 +11,7 @@ our @EXPORT_OK = qw(get_profile set_profile);
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 
 my %types = (
@@ -225,7 +225,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.02 - December 22, 2007
+Version 0.03 - December 24, 2007
 
 =head1 SYNOPSIS
 
@@ -307,7 +307,7 @@ and the type of the other words is all_lc.
 =item * other
 
 Undefined type (e.g. a CamelCase code identifier in word context, or a
-string containing several words of type 'other').
+string containing several alternate types in string context.)
 
 =back
 
@@ -411,11 +411,11 @@ kind of words.
 
     # EXAMPLE 3: Change a string using several custom profiles
 
-    my %profile1 = ( string_type  => 'all_uc');
+    my %profile1 = ( string_type  => 'all_uc' );
     $new_string = set_profile($samples[2], %profile1);
     # $new_string is 'LANGAGES DÉRIVÉS DU C'
     
-    my %profile2 = ( string_type => 'all_lc', force_change => 1);
+    my %profile2 = ( string_type => 'all_lc', force_change => 1 );
     $new_string = set_profile($samples[2], %profile2);
     # $new_string is 'langages dérivés du c'
     
@@ -441,7 +441,7 @@ None by default.
 =head1 LIMITATIONS
 
 Since String::CaseProfile is a multilanguage module and title case is a
-language-dependent feature, so the functions provided don't handle title
+language-dependent feature, the functions provided don't handle title
 case capitalization (in the See Also section you will find further
 information on modules you can use for this task). Anyway, you can use
 the profile information provided by get_profile to implement a solution

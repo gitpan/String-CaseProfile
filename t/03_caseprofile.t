@@ -2,11 +2,11 @@
 use strict;
 use warnings;
 
-use Test::More tests => 19;
+use Test::More tests => 22;
 
 use String::CaseProfile qw(get_profile set_profile);
 use Encode;
-    
+
 my @strings = (
                 'Entorno de tiempo de ejecución',
                 'è un linguaggio veloce',
@@ -24,7 +24,6 @@ my $new_string;
 
 
 # EXAMPLE 1: Get the profile of a string
-
 my %profile = get_profile($samples[0]);
 
 is($profile{string_type}, '1st_uc', 'First letter of first word is uppercase');
@@ -33,7 +32,6 @@ is($profile{words}[2]->{word}, 'tiempo', 'Third word is tiempo');
 is($profile{words}[2]->{type}, 'all_lc', 'The type of the 2nd word is all_lc');
 
 # Test the token recognition regex
-
 %profile = get_profile($samples[3]);
 is(@{$profile{words}}, 5, 'String contains 5 words');
 is($profile{words}[0]->{word}, 'sil·labaris', 'First word is sil·labaris');
@@ -52,7 +50,6 @@ is($profile{words}[1]->{word}, 'some_ID', 'Second word is some_ID');
 is($profile{words}[1]->{type}, 'other', 'Type of some_ID is other');
 
 # EXAMPLE 2: Get the profile of a string and apply it to another string
-    
 my $ref_string1 = 'REFERENCE STRING';
 my $ref_string2 = 'Another reference string';
 
@@ -85,6 +82,23 @@ is($new_string, 'langages DÉRIVÉS du C', 'langages DÉRIVÉS du C');
 
 $new_string = set_profile($samples[2], %profile4);
 is($new_string, 'Langages Dérivés Du C', 'Langages Dérivés Du C');
+
+# Validation tests
+my %bad_profile1 = get_profile(1);
+$new_string = set_profile($samples[0], %bad_profile1);
+is($new_string, $samples[0], 'Unchanged string');
+
+my %bad_profile2 = ( string_type => 'bad' );
+$new_string = set_profile( $samples[0], %bad_profile2);
+is($new_string, $samples[0], 'Unchanged string');
+
+my %bad_profile3 = ( custom => {
+                                index => { '7' => 'all_uc' },
+                                default => 'bogus',
+                           }
+               );
+$new_string = set_profile($samples[0], %bad_profile3);
+is($new_string, $samples[0], 'Unchanged string');
 
 
 

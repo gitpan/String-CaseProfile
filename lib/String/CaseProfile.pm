@@ -11,7 +11,7 @@ our @EXPORT_OK = qw(get_profile set_profile);
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 
 my %types = (
@@ -180,9 +180,7 @@ sub set_profile {
 sub _word_type {
     my ($word) = @_;
     
-    my $consonant_rx = qr{[bcdfghjklmnpqrstvwxyz]}i;
-    
-    if ($word =~ /^$consonant_rx$/) {
+    if ($word =~ /^[bcdfghjklmnpqrstvwxyz]$/i) {
         return 'other';
     } elsif ($word =~ /^\p{Lu}(?:\p{Ll}|[-'\x92\xB7])*$/) {
         return '1st_uc';
@@ -225,32 +223,34 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.03 - December 24, 2007
+Version 0.04 - January 29, 2008
 
 =head1 SYNOPSIS
 
     use String::CaseProfile qw(get_profile set_profile);
     
-    # Get the profile of a string
     my $reference_string = 'Some reference string';
+    my $string = 'sample string';
+    
+    # Typical, single-line usage
+    my $target_string = set_profile($string, get_profile($reference_string));
+    
+    # Get the profile of a string, access the details, 
+    # and apply it to another string
     my %ref_profile = get_profile($reference_string);
     
     my $string_type = $ref_profile{string_type};
+    my $word        = $ref_profile{words}[2]->{word}; # third word
+    my $word_type   = $ref_profile{words}[2]->{type};
     
-    # Details of the third word
-    my $word_type = $ref_profile{words}[2]->{type};
-    my $word      = $ref_profile{words}[2]->{word};
-    
-    # Apply the profile to another string
-    my $string = 'sample string';
-    my $new_string = set_profile($string, %ref_profile);
+    my $new_string  = set_profile($string, %ref_profile);
     
     # Use custom profiles
-    my %profile1 = ( string_type => 'all_uc' );
-    $new_string = set_profile($string, %profile1);
+    my %profile1 = ( string_type => '1st_uc' );
+    $new_string  = set_profile($string, %profile1);
     
     my %profile2 = ( string_type => 'all_lc', force_change => 1 );
-    $new_string = set_profile($string, %profile2);
+    $new_string  = set_profile($string, %profile2);
     
     my %profile3 = (
                     custom => {
@@ -262,7 +262,7 @@ Version 0.03 - December 24, 2007
                                              },
                                }
                     );
-    $new_string = set_profile($string, %profile3);
+    $new_string  = set_profile($string, %profile3);
 
 
 
@@ -287,24 +287,24 @@ types according to their case:
 
 =over 4
 
-=item * all_lc
+=item * C<all_lc>
 
 In word context, it means that all the letters are lowercase.
-In string context, it means that every word is of all_lc type.
+In string context, it means that every word is of C<all_lc> type.
 
-=item * all_uc
+=item * C<all_uc>
 
 In word context, it means that all the letters are uppercase.
-In string context, it means that every word is of all_uc type.
+In string context, it means that every word is of C<all_uc> type.
 
-=item * 1st_uc
+=item * C<1st_uc>
 
 In word context, it means that the first letter is uppercase,
 and the other letters are lowercase.
-In string context, it means that the type of the first word is 1st_uc,
-and the type of the other words is all_lc.
+In string context, it means that the type of the first word is C<1st_uc>,
+and the type of the other words is C<all_lc>.
 
-=item * other
+=item * C<other>
 
 Undefined type (e.g. a CamelCase code identifier in word context, or a
 string containing several alternate types in string context.)
@@ -316,19 +316,19 @@ string containing several alternate types in string context.)
 
 =over 4
 
-=item get_profile($string)
+=item C<get_profile($string)>
 
 Returns a hash containing the profile details for $string. The string provided
 must be encoded as B<utf8>. The hash keys are the following:
 
 =over 4
 
-=item * string_type
+=item * C<string_type>
 
 Scalar containing the string type, if it can be determined; otherwise,
 its value is 'other'.
 
-=item * words
+=item * C<words>
 
 Reference to an array containing a hash for every word in the string.
 Each hash has two keys: B<word> and B<type>.
@@ -339,19 +339,19 @@ Each hash has two keys: B<word> and B<type>.
 
 =over 4
 
-=item set_profile($string, %profile)
+=item C<set_profile($string, %profile)>
 
 Applies %profile to $string and returns a new string. $string must be encoded
 as B<utf8>. The profile configuration parameters (hash keys) are the following:
 
 =over 4
 
-=item * string_type
+=item * C<string_type>
 
 You can specify one of the string types mentioned above (except 'other') as the
 type that should be applied to the string.
 
-=item * custom
+=item * C<custom>
 
 As an alternative, you can define a custom profile as a reference to a hash in
 which you can specify types for specific word (zero-based) positions, conversions
@@ -359,7 +359,7 @@ for the types mentioned above, and you can define a 'default' type for the words
 for which none of the preceding rules apply. The order of evaluation is 1) index,
 2) type conversion, 3) default type. For more information, see the examples below.
 
-=item * force_change
+=item * C<force_change>
 
 By default, set_profile will ignore words with type 'other' when applying
 the profile. You can use this boolean parameter to enable changing this
@@ -380,7 +380,7 @@ kind of words.
                     'langages dérivés du C',
                   );
 
-    # encode strings as utf-8
+    # Encode strings as utf-8
     my @samples = map { decode('iso-8859-1', $_) } @strings;
 
     my $new_string;
@@ -469,7 +469,7 @@ Enrique Nell, E<lt>perl_nell@telefonica.netE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2007 by Enrique Nell.
+Copyright (C) 2007-2008 by Enrique Nell.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

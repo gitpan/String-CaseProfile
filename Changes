@@ -1,5 +1,10 @@
 Revision history for Perl extension String::CaseProfile.
 
+0.05  February 3, 2008
+
+    * Added the copy_profile convenience function
+    * Updated the documentation
+
 0.04  January 29, 2008
 
     * Removed the consonants_rx compilation, since this regex is used only once

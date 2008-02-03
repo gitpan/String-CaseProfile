@@ -7,11 +7,15 @@ use Carp qw(carp);
 
 use Exporter;
 use base 'Exporter';
-our @EXPORT_OK = qw(get_profile set_profile);
+our @EXPORT_OK = qw(
+                    get_profile
+                    set_profile
+                    copy_profile
+                   );
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 
 my %types = (
@@ -213,6 +217,23 @@ sub _string_type {
     }
 }
 
+sub copy_profile {
+    my %options = @_;
+    
+    if ( $options{from} && $options{to} ) {
+        return set_profile($options{to}, get_profile($options{from}));
+    } elsif ( !$options{from} && !$options{to} ) {
+        carp "Missing parameters\n";
+        return '';
+    } elsif ( !$options{from} ) {
+        carp "Missing reference string\n";
+        return $options{to};
+    } else {
+        carp "Missing target string\n";
+        return '';
+    }
+}
+
 
 1;
 __END__
@@ -223,17 +244,23 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.04 - January 29, 2008
+Version 0.05 - February 3, 2008
 
 =head1 SYNOPSIS
 
-    use String::CaseProfile qw(get_profile set_profile);
+    use String::CaseProfile qw(get_profile set_profile copy_profile);
     
     my $reference_string = 'Some reference string';
     my $string = 'sample string';
     
     # Typical, single-line usage
     my $target_string = set_profile($string, get_profile($reference_string));
+    
+    # Alternatively, you can use the 'copy_profile' convenience function:
+    my $target_string = copy_profile(
+                                        from => $reference_string,
+                                        to   => $string,
+                                    );
     
     # Get the profile of a string, access the details, 
     # and apply it to another string
@@ -257,9 +284,9 @@ Version 0.04 - January 29, 2008
                                 default => 'all_lc',
                                 all_uc  => '1st_uc',
                                 index   => {
-                                                3 => '1st_uc',
-                                                5 => 'all_lc',
-                                             },
+                                            3 => '1st_uc',
+                                            5 => 'all_lc',
+                                           },
                                }
                     );
     $new_string  = set_profile($string, %profile3);
@@ -272,18 +299,21 @@ This module provides a convenient way of handling the letter case conversion of
 sentences/phrases/chunks in machine translation, case-sensitive search and replace,
 and other text processing applications.
 
-String::CaseProfile contains two functions:
+String::CaseProfile contains three functions:
 
 B<get_profile> determines the letter case profile of a string.
 
 B<set_profile> applies a letter case profile to a string; you can apply a
 profile determined by get_profile, or you can create your own custom profile.
 
-Both functions are Unicode-aware and support text in most European languages.
+B<copy_profile> gets the profile of a string and applies it to another string
+in a single step.
+
+These functions are Unicode-aware and support text in most European languages.
 You must feed them utf8-encoded strings.
 
-These functions use the following identifiers to classify word and string
-types according to their case:
+B<get_profile> and B<set_profile> use the following identifiers to classify
+word and string types according to their case:
 
 =over 4
 
@@ -369,9 +399,22 @@ kind of words.
 
 =back
 
+=over 4
+
+=item C<copy_profile(from =E<gt> $source, to =E<gt> $target)>
+
+Gets the profile of C<$source> and applies it to C<$target>. Returns
+the resulting string.
+
+=back
+
 =head1 EXAMPLES
 
-    use String::CaseProfile qw(get_profile set_profile);
+    use String::CaseProfile qw(
+                                get_profile
+                                set_profile
+                                copy_profile
+                               );
     use Encode;
     
     my @strings = (
@@ -401,22 +444,25 @@ kind of words.
     my $ref_string1 = 'REFERENCE STRING';
     my $ref_string2 = 'Another reference string';
 
-    $new_string = set_profile($samples[1], get_profile($ref_string1));
+    $new_string = set_profile( $samples[1], get_profile($ref_string1) );
     # The current value of $new_string is 'È UN LINGUAGGIO VELOCE'
 
-    $new_string = set_profile($samples[1], get_profile($ref_string2));
+    $new_string = set_profile( $samples[1], get_profile($ref_string2) );
     # Now it's 'È un linguaggio veloce'
-
+    
+    # Alternative, using copy_profile
+    $new_string = copy_profile( from => $ref_string1, to => $samples[1] );
+    $new_string = copy_profile( from => $ref_string2, to => $samples[1] );
 
 
     # EXAMPLE 3: Change a string using several custom profiles
 
     my %profile1 = ( string_type  => 'all_uc' );
-    $new_string = set_profile($samples[2], %profile1);
+    $new_string = set_profile( $samples[2], %profile1 );
     # $new_string is 'LANGAGES DÉRIVÉS DU C'
     
     my %profile2 = ( string_type => 'all_lc', force_change => 1 );
-    $new_string = set_profile($samples[2], %profile2);
+    $new_string = set_profile( $samples[2], %profile2 );
     # $new_string is 'langages dérivés du c'
     
     my %profile3 = (
@@ -425,11 +471,11 @@ kind of words.
                                 index   => { '1'  => 'all_uc' }, # 2nd word
                                }
                    );
-    $new_string = set_profile($samples[2], %profile3);
+    $new_string = set_profile( $samples[2], %profile3 );
     # $new_string is 'langages DÉRIVÉS du C'
 
     my %profile4 = ( custom => { all_lc => '1st_uc' } );
-    $new_string = set_profile($samples[2], %profile4);
+    $new_string = set_profile( $samples[2], %profile4 );
     # $new_string is 'Langages Dérivés Du C'
 
 

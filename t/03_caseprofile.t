@@ -2,9 +2,9 @@
 use strict;
 use warnings;
 
-use Test::More tests => 22;
+use Test::More tests => 24;
 
-use String::CaseProfile qw(get_profile set_profile);
+use String::CaseProfile qw(get_profile set_profile copy_profile);
 use Encode;
 
 my @strings = (
@@ -57,6 +57,13 @@ $new_string = set_profile($samples[1], get_profile($ref_string1));
 is($new_string, 'È UN LINGUAGGIO VELOCE', 'È UN LINGUAGGIO VELOCE');
 
 $new_string = set_profile($samples[1], get_profile($ref_string2));
+is($new_string, 'È un linguaggio veloce', 'È un linguaggio veloce');
+
+# Using the copy_profile function
+$new_string = copy_profile(from => $ref_string1, to => $samples[1]);
+is($new_string, 'È UN LINGUAGGIO VELOCE', 'È UN LINGUAGGIO VELOCE');
+
+$new_string = copy_profile(from => $ref_string2, to => $samples[1]);
 is($new_string, 'È un linguaggio veloce', 'È un linguaggio veloce');
 
 

@@ -15,32 +15,32 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
+
+our $word_re =  qr{
+                    (?:
+                        \p{L}
+                        |
+                        (?<=\p{L})[-'\x92_](?=\p{L})
+                        |
+                        (?<=[lL])\xB7(?=[lL])
+                        |
+                        \d
+                    )+
+                  }x;
 
 
-my %types = (
+our %types = (
                 '1st_uc' => 1,
                 'all_uc' => 2,
                 'all_lc' => 3,
                 'other'  => 4,
-            );
+             );
 
 
 sub get_profile {
     my ($string) = @_;
 
-    my $word_re = qr{
-                        (?:
-                            \p{L}
-                            |
-                            (?<=\p{L})[-'\x92_](?=\p{L})
-                            |
-                            (?<=[lL])\xB7(?=[lL])
-                            |
-                            \d
-                        )+
-                    }x;
-    
     my @words = $string =~ /($word_re)/g;
     my @word_types = map { _word_type($_) } @words;
     
@@ -244,7 +244,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.05 - February 3, 2008
+Version 0.06 - June 4, 2008
 
 =head1 SYNOPSIS
 

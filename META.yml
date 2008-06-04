@@ -1,11 +1,11 @@
 --- #YAML:1.0
 name:                String-CaseProfile
-version:             0.05
+version:             0.06
 abstract:            Get/Set the letter case profile of a string
 license:             perl
 author:              
     - Enrique Nell <perl_nell@telefonica.net>
-generated_by:        ExtUtils::MakeMaker version 6.38
+generated_by:        ExtUtils::MakeMaker version 6.42_01
 distribution_type:   module
 requires:     
 meta-spec:

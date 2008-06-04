@@ -1,5 +1,12 @@
 Revision history for Perl extension String::CaseProfile.
 
+0.06  June 4, 2008
+
+    * Moved the $word_re compiled regex definition to the top-level (to avoid
+      compiling it every time the get_profile function is called), declaring
+      it as a global package variable
+    * Turned the %types global lexical variable into a global package variable
+
 0.05  February 3, 2008
 
     * Added the copy_profile convenience function

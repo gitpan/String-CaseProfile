@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                String-CaseProfile
-version:             0.06
+version:             0.07
 abstract:            Get/Set the letter case profile of a string
 license:             perl
 author:              

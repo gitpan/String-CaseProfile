@@ -15,7 +15,8 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
+
 
 our $word_re =  qr{
                     (?:
@@ -39,13 +40,27 @@ our %types = (
 
 
 sub get_profile {
-    my ($string) = @_;
+    my $string = shift;
 
+    # read excluded words, if any
+    my %excluded;
+    if ($_[0]) {
+        $excluded{$_}++ foreach (@{$_[0]});
+    }
+    
     my @words = $string =~ /($word_re)/g;
-    my @word_types = map { _word_type($_) } @words;
+    my @word_types = map {
+                            _exclude($_, \%excluded)
+                            ?
+                            'excluded'
+                            :
+                            _word_type($_)
+                            
+                         } @words;
     
     my %profile;
     $profile{string_type} = _string_type(@word_types);
+    
     for (my $i = 0; $i <= $#words; $i++) {
         push @{$profile{words}}, {
                                     word => $words[$i],
@@ -57,43 +72,30 @@ sub get_profile {
 }
 
 
+sub _exclude {
+    my ($word, $excluded_href) = @_;
+    
+    return 1 if $excluded_href->{$word}; 
+
+    if ($word =~ /[-']/) {
+        my @pieces = split /[-']/, $word;
+        my @excluded = grep { $excluded_href->{$_} } @pieces;
+        if (@excluded) { return 1 } else { return 0 };
+    } else {
+        return 0;
+    }
+}
+
+
 sub set_profile {
     my ($string, %ref_profile) = @_;
 
-    my %string_profile = get_profile($string);
+    my %string_profile = get_profile($string, $ref_profile{exclude});
+    
     my @words = map { $_->{word} } @{$string_profile{words}};
     my @word_types = map { $_->{type} } @{$string_profile{words}};
     
     my $force = $ref_profile{'force_change'};
-
-    my %dispatch = (
-                    '1st_uc' => sub {
-                                        if ( $_[1] eq 'other' && !$force ) {
-                                            return $_[0];
-                                        } else {
-                                            return ucfirst(lc($_[0]));
-                                        }
-                                    },
-                    'all_uc' => sub {
-                                        if ( $_[1] eq 'other' && !$force ) {
-                                            return $_[0];
-                                        } else {
-                                            return uc($_[0]);
-                                        }
-                                    },
-                    'all_lc' => sub {
-                                        if ( $_[1] eq 'other' && !$force ) {
-                                            return $_[0];
-                                        } else {
-                                            return lc($_[0]);
-                                        }
-                                    },
-                    'other'  => sub { return $_[0] },
-                   );
-    
-    my @transformed;
-    
-    # typical string types
     
     # validate string_type
     my ($legal, $ref_string_type);
@@ -101,27 +103,54 @@ sub set_profile {
         $ref_string_type = $ref_profile{string_type};
         if ($types{$ref_string_type} && $ref_string_type ne 'other') {
             $legal = 1;
+        } elsif ($ref_string_type eq 'other') {
+            return $string;
         } else {
-            carp "Illegal value of string_type";
+            carp "\nIllegal value of string_type";
         }
     }
     
+    my @transformed;
+    
     if ($legal) {
-
         if ($ref_string_type eq '1st_uc') {
-            $transformed[0] = $dispatch{'1st_uc'}->($words[0], $word_types[0]);
+            if ($word_types[0] eq 'excluded') {
+                $transformed[0] = $words[0];
+            } else {
+                $transformed[0] = _transform(
+                                              '1st_uc',
+                                              $words[0],
+                                              $word_types[0],
+                                              $force
+                                            );
+            }
             for (my $i = 1; $i <= $#words; $i++) {
-                push @transformed, $dispatch{'all_lc'}->(
-                                                         $words[$i],
-                                                         $word_types[$i]
-                                                        );
+                if ($word_types[$i] eq 'excluded') {
+                    push @transformed, $words[$i];
+                } else {
+                    push @transformed, _transform(
+                                                  'all_lc',
+                                                  $words[$i],
+                                                  $word_types[$i],
+                                                  $force
+                                                 );
+                }
             }
         } else {
             for (my $i = 0; $i <= $#words; $i++) {
-                push @transformed, $dispatch{$ref_string_type}->(
-                                                                 $words[$i],
-                                                                 $word_types[$i]
-                                                                );
+                if (
+                    $word_types[$i] eq 'excluded' 
+                    && $ref_string_type ne 'all_uc'
+                    ) {
+                        push @transformed, $words[$i];
+                } else {
+                    push @transformed, _transform(
+                                                  $ref_string_type,
+                                                  $words[$i],
+                                                  $word_types[$i],
+                                                  $force
+                                                 );
+                }
             }
         }
         
@@ -135,7 +164,7 @@ sub set_profile {
             if ($types{$type} && $types{$type} ne 'other') {
                 $default_type = $type;
             } else {
-                carp "Illegal default value in custom profile";
+                carp "\nIllegal default value in custom profile";
             }
         }
         
@@ -145,25 +174,50 @@ sub set_profile {
             my $trigger_type = $ref_profile{custom}->{$word_types[$i]};
             
             if ($in_index) {
-                if ($in_index ne $word_types[$i]) {
-                    push @transformed, $dispatch{$in_index}->(
-                                                              $words[$i],
-                                                              $word_types[$i]
-                                                             );
+                if (
+                    $word_types[$i] eq 'excluded' 
+                    && $in_index ne 'all_uc'
+                    ) {
+                        push @transformed, $words[$i];
+                } elsif ($in_index ne $word_types[$i]) {
+                    push @transformed, _transform(
+                                                  $in_index,
+                                                  $words[$i],
+                                                  $word_types[$i],
+                                                  $force
+                                                 );
                 } else {
                     push @transformed, $words[$i];
                 }
             } elsif ($trigger_type) {
-                push @transformed, $dispatch{$trigger_type}->(
-                                                              $words[$i],
-                                                              $word_types[$i]
-                                                              );
+                if (
+                    $word_types[$i] eq 'excluded' 
+                    && $ref_string_type ne 'all_uc'
+                    ) {
+                        push @transformed, $words[$i];
+                } else {
+                    push @transformed, _transform(
+                                                  $trigger_type,
+                                                  $words[$i],
+                                                  $word_types[$i],
+                                                  $force
+                                                 );
+                }
 
             } elsif ($default_type) { # use default type
-                push @transformed, $dispatch{$default_type}->(
-                                                              $words[$i],
-                                                              $word_types[$i]
-                                                              );
+                if (
+                    $word_types[$i] eq 'excluded' 
+                    && $ref_string_type ne 'all_uc'
+                    ) {
+                        push @transformed, $words[$i];
+                } else {
+                    push @transformed, _transform(
+                                                  $default_type,
+                                                  $words[$i],
+                                                  $word_types[$i],
+                                                  $force
+                                                 );
+                }
             } else {
                 push @transformed, $words[$i];
             }
@@ -178,6 +232,40 @@ sub set_profile {
     }
 
     return $string;
+}
+
+
+sub copy_profile {
+    my %options = @_;
+    
+    if ( $options{from} && $options{to} ) {
+        if ( $options{exclude} ) {
+            my %ref_profile = get_profile(
+                                          $options{from},
+                                          $options{exclude},
+                                         );
+            
+            $ref_profile{exclude} = $options{exclude};
+            foreach (keys %ref_profile) {
+                print "$_\t$ref_profile{$_}\n";
+            }
+            return set_profile(
+                                $options{to},
+                                %ref_profile,
+                              );
+        } else {
+            return set_profile($options{to}, get_profile($options{from}));
+        }
+    } elsif ( !$options{from} && !$options{to} ) {
+        carp "Missing parameters\n";
+        return '';
+    } elsif ( !$options{from} ) {
+        carp "Missing reference string\n";
+        return $options{to};
+    } else {
+        carp "Missing target string\n";
+        return '';
+    }
 }
 
 
@@ -198,10 +286,11 @@ sub _word_type {
     
 }
 
+
 sub _string_type {
     my @types = @_;
     
-    my $types_str = join "", map { $types{$_} } @types;
+    my $types_str = join "", map { $types{$_} } grep { $_ ne 'excluded' } @types;
     
     # remove 'other' word types
     $types_str =~ s/4//g;
@@ -217,21 +306,20 @@ sub _string_type {
     }
 }
 
-sub copy_profile {
-    my %options = @_;
+
+sub _transform {
+    my ($type, $word, $word_type, $force) = @_;
     
-    if ( $options{from} && $options{to} ) {
-        return set_profile($options{to}, get_profile($options{from}));
-    } elsif ( !$options{from} && !$options{to} ) {
-        carp "Missing parameters\n";
-        return '';
-    } elsif ( !$options{from} ) {
-        carp "Missing reference string\n";
-        return $options{to};
-    } else {
-        carp "Missing target string\n";
-        return '';
-    }
+    return $word if ($word_type eq 'other' && !$force);
+    
+    my %dispatch = (
+                    '1st_uc' => ucfirst(lc($word)),
+                    'all_uc' => uc($word),
+                    'all_lc' => lc($word),
+                    'other'  => $word,
+                   );
+    
+    $dispatch{$type};
 }
 
 
@@ -244,7 +332,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.06 - June 4, 2008
+Version 0.07 - June 17, 2008
 
 =head1 SYNOPSIS
 
@@ -252,6 +340,7 @@ Version 0.06 - June 4, 2008
     
     my $reference_string = 'Some reference string';
     my $string = 'sample string';
+    
     
     # Typical, single-line usage
     my $target_string = set_profile($string, get_profile($reference_string));
@@ -262,6 +351,7 @@ Version 0.06 - June 4, 2008
                                         to   => $string,
                                     );
     
+    
     # Get the profile of a string, access the details, 
     # and apply it to another string
     my %ref_profile = get_profile($reference_string);
@@ -271,6 +361,7 @@ Version 0.06 - June 4, 2008
     my $word_type   = $ref_profile{words}[2]->{type};
     
     my $new_string  = set_profile($string, %ref_profile);
+    
     
     # Use custom profiles
     my %profile1 = ( string_type => '1st_uc' );
@@ -299,7 +390,7 @@ This module provides a convenient way of handling the letter case conversion of
 sentences/phrases/chunks in machine translation, case-sensitive search and replace,
 and other text processing applications.
 
-String::CaseProfile contains three functions:
+String::CaseProfile includes three functions:
 
 B<get_profile> determines the letter case profile of a string.
 
@@ -346,10 +437,16 @@ string containing several alternate types in string context.)
 
 =over 4
 
-=item C<get_profile($string)>
+=item C<get_profile($string, [ $excluded ])>
 
 Returns a hash containing the profile details for $string. The string provided
-must be encoded as B<utf8>. The hash keys are the following:
+must be encoded as B<utf8>.
+
+$excluded is an optional parameter containing a reference to a list of terms that
+should not be considered when determining the profile of $string (e.g., the word
+"Internet" in some cases, or the first person personal pronoun in English, "I").
+
+The keys of the returned hash are the following:
 
 =over 4
 
@@ -389,6 +486,13 @@ for the types mentioned above, and you can define a 'default' type for the words
 for which none of the preceding rules apply. The order of evaluation is 1) index,
 2) type conversion, 3) default type. For more information, see the examples below.
 
+=item * C<exclude>
+
+Optionally, you can specify a list of words that should not be affected by the
+B<get_profile> function. The value of the C<exclude> key should be an array
+reference. The case profile of these words won't change unless the target
+string type is 'all_uc'.
+
 =item * C<force_change>
 
 By default, set_profile will ignore words with type 'other' when applying
@@ -401,12 +505,31 @@ kind of words.
 
 =over 4
 
-=item C<copy_profile(from =E<gt> $source, to =E<gt> $target)>
+=item C<copy_profile(from =E<gt> $source, to =E<gt> $target), [ exclude =E<gt> $array_ref ])>
 
-Gets the profile of C<$source> and applies it to C<$target>. Returns
+Gets the profile of C<$source>, applies it to C<$target>, and returns
 the resulting string.
 
+You can also specify words that should be excluded both in the input string
+and the target string:
+
+    copy_profile(
+                    from    => $source,
+                    to      => $target,
+                    exclude => $array_ref,
+                );
+
 =back
+
+B<NOTES:>
+
+When these functions process the excluded words list, they also
+consider compound words that include them, like "Internet-based" or "I've".
+
+The list of excluded words is case-sensitive (i.e., if you exclude the word 'MP3',
+its lowercase version, 'mp3', won't be excluded unless you add it to the list).
+
+
 
 =head1 EXAMPLES
 
@@ -422,6 +545,7 @@ the resulting string.
                     'è un linguaggio veloce',
                     'langages dérivés du C',
                   );
+
 
     # Encode strings as utf-8
     my @samples = map { decode('iso-8859-1', $_) } @strings;
@@ -455,6 +579,7 @@ the resulting string.
     $new_string = copy_profile( from => $ref_string2, to => $samples[1] );
 
 
+
     # EXAMPLE 3: Change a string using several custom profiles
 
     my %profile1 = ( string_type  => 'all_uc' );
@@ -477,6 +602,89 @@ the resulting string.
     my %profile4 = ( custom => { all_lc => '1st_uc' } );
     $new_string = set_profile( $samples[2], %profile4 );
     # $new_string is 'Langages Dérivés Du C'
+
+
+
+    # MORE EXAMPLES EXCLUDING WORDS
+    
+    # A second batch of sample strings
+    @strings = (
+                'conexión a Internet',
+                'An Internet-based application',
+                'THE ABS MODULE',
+                'Yes, I think so',
+                "this is what I'm used to",
+               );
+               
+    # Encode strings as utf-8
+    my @samples = map { decode('iso-8859-1', $_) } @strings;
+
+
+
+    # EXAMPLE 4: Get the profile of a string excluding the word 'Internet'
+    #            and apply it to another string
+
+    my %profile = get_profile($samples[0], ['Internet']);
+
+    print "$profile{string_type}\n";      # prints  'all_lc'
+    print "$profile{words}[2]->{word}\n"; # prints 'Internet'
+    print "$profile{words}[2]->{type}\n"; # prints 'excluded'
+
+    # Set this profile to $samples[1], excluding the word 'Internet'
+    $profile{exclude} = ['Internet'];
+    $new_string = set_profile($samples[1], %profile);
+
+    print "$new_string\n"; # prints "an Internet-based application", preserving
+                           # the case of the 'Internet-based' compound word
+
+
+
+    # EXAMPLE 5: Set the profile of a string containing a '1st_uc' excluded word
+    #            to 'all_uc'
+
+    %profile = ( string_type => 'all_uc', exclude => ['Internet'] );
+    $new_string = set_profile($samples[0], %profile);
+    
+    print "$new_string\n";   # prints 'CONEXIÓN A INTERNET'
+
+
+
+    # EXAMPLE 6: Set the profile of a string containing an 'all_uc'
+    #            excluded word to 'all_lc'
+    
+    %profile = ( string_type => 'all_lc', exclude => ['ABS'] );
+    $new_string = set_profile($samples[2], %profile);
+
+    print "$new_string\n";   # prints 'the ABS module'
+
+
+
+    # EXAMPLE 7: Get the profile of a string containing the word 'I' and
+    #            apply it to a string containing the compound word 'I'm'
+    #            using the copy_profile function
+
+    $new_string = copy_profile(
+                                from => $samples[3],
+                                to   => $samples[4],
+                                exclude => ['I'],
+                              );
+
+    print "$new_string\n";   # prints "This is what I'm used to"
+
+
+
+    # EXAMPLE 8: Change a string using a custom profile
+    
+    %profile = (
+                    custom  => {
+                                default => '1st_uc',
+                                index   => { '1'  => 'all_lc' }, # 2nd word
+                               },
+                    exclude => ['ABS'],
+               );
+
+    $new_string = set_profile($samples[2], %profile);
+    print "$new_string\n";  # prints 'The ABS Module'
 
 
 

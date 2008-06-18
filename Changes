@@ -1,5 +1,9 @@
 Revision history for Perl extension String::CaseProfile.
 
+0.08  June 18, 2008
+
+    * Improved the documentation
+
 0.07  June 17, 2008
 
     * Added functionality that allows the user to specify (input) words that

@@ -15,7 +15,7 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 
 our $word_re =  qr{
@@ -141,7 +141,7 @@ sub set_profile {
                 if (
                     $word_types[$i] eq 'excluded' 
                     && $ref_string_type ne 'all_uc'
-                    ) {
+                   ) {
                         push @transformed, $words[$i];
                 } else {
                     push @transformed, _transform(
@@ -177,7 +177,7 @@ sub set_profile {
                 if (
                     $word_types[$i] eq 'excluded' 
                     && $in_index ne 'all_uc'
-                    ) {
+                   ) {
                         push @transformed, $words[$i];
                 } elsif ($in_index ne $word_types[$i]) {
                     push @transformed, _transform(
@@ -193,7 +193,7 @@ sub set_profile {
                 if (
                     $word_types[$i] eq 'excluded' 
                     && $ref_string_type ne 'all_uc'
-                    ) {
+                   ) {
                         push @transformed, $words[$i];
                 } else {
                     push @transformed, _transform(
@@ -208,7 +208,7 @@ sub set_profile {
                 if (
                     $word_types[$i] eq 'excluded' 
                     && $ref_string_type ne 'all_uc'
-                    ) {
+                   ) {
                         push @transformed, $words[$i];
                 } else {
                     push @transformed, _transform(
@@ -332,7 +332,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.07 - June 17, 2008
+Version 0.08 - June 18, 2008
 
 =head1 SYNOPSIS
 
@@ -505,7 +505,7 @@ kind of words.
 
 =over 4
 
-=item C<copy_profile(from =E<gt> $source, to =E<gt> $target), [ exclude =E<gt> $array_ref ])>
+=item C<copy_profile(from =E<gt> $source, to =E<gt> $target, [ exclude =E<gt> $array_ref ])>
 
 Gets the profile of C<$source>, applies it to C<$target>, and returns
 the resulting string.
@@ -519,12 +519,17 @@ and the target string:
                     exclude => $array_ref,
                 );
 
+This is just a convenience function. If C<copy_profile> cannot determine
+the profile of the source string, it will leave unchanged the target string.
+If you need more control, you should use the C<get_profile> and C<set_profile>
+functions.
+
 =back
 
 B<NOTES:>
 
-When these functions process the excluded words list, they also
-consider compound words that include them, like "Internet-based" or "I've".
+When these functions process excluded words, they also consider compound
+words that include them, like "Internet-based" or "I've".
 
 The list of excluded words is case-sensitive (i.e., if you exclude the word 'MP3',
 its lowercase version, 'mp3', won't be excluded unless you add it to the list).
@@ -645,7 +650,9 @@ its lowercase version, 'mp3', won't be excluded unless you add it to the list).
     %profile = ( string_type => 'all_uc', exclude => ['Internet'] );
     $new_string = set_profile($samples[0], %profile);
     
-    print "$new_string\n";   # prints 'CONEXIÓN A INTERNET'
+    print "$new_string\n";   # prints 'CONEXIÓN A INTERNET', as expected, since
+                             # the case profile of a excluded word is not preserved
+                             # if the target string type is 'all_uc'
 
 
 
@@ -655,8 +662,8 @@ its lowercase version, 'mp3', won't be excluded unless you add it to the list).
     %profile = ( string_type => 'all_lc', exclude => ['ABS'] );
     $new_string = set_profile($samples[2], %profile);
 
-    print "$new_string\n";   # prints 'the ABS module'
-
+    print "$new_string\n";   # prints 'the ABS module', preserving the 
+                             # excluded word case profile
 
 
     # EXAMPLE 7: Get the profile of a string containing the word 'I' and

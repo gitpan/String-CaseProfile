@@ -15,7 +15,7 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
 
 our $word_re =  qr{
@@ -246,9 +246,7 @@ sub copy_profile {
                                          );
             
             $ref_profile{exclude} = $options{exclude};
-            foreach (keys %ref_profile) {
-                print "$_\t$ref_profile{$_}\n";
-            }
+            
             return set_profile(
                                 $options{to},
                                 %ref_profile,
@@ -332,7 +330,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.08 - June 18, 2008
+Version 0.09 - June 20, 2008
 
 =head1 SYNOPSIS
 

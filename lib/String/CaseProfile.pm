@@ -15,7 +15,7 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 
 our $word_re =  qr{
@@ -334,7 +334,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.11 - November 1, 2008
+Version 0.12 - November 1, 2008
 
 =head1 SYNOPSIS
 
@@ -477,7 +477,7 @@ For instance, the patterns of the common types are:
 This feature can be useful to process 'other' string types using regular expressions.
 E.g., you can use it to detect (probable) title case strings:
 
-    if ( $profile{string} =~ /^f[fl]*f$/ ) {
+    if ( $profile{fold} =~ /^f[fl]*f$/ ) {
         # some code here
     }
 

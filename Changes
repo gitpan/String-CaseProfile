@@ -1,5 +1,9 @@
 Revision history for Perl extension String::CaseProfile.
 
+0.12  November 1, 2008
+
+    * Fixed a bug in a doc sample.
+
 0.11  November 1, 2008
 
     * Changed the name of the new 'string' key (introduced in version 0.10)

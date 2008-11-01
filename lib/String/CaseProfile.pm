@@ -15,7 +15,7 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 
 our $word_re =  qr{
@@ -32,10 +32,10 @@ our $word_re =  qr{
 
 
 our %types = (
-                '1st_uc' => 1,
-                'all_uc' => 2,
-                'all_lc' => 3,
-                'other'  => 4,
+                '1st_uc' => 'f',
+                'all_uc' => 'u',
+                'all_lc' => 'l',
+                'other'  => 'o',
              );
 
 
@@ -59,7 +59,7 @@ sub get_profile {
                          } @words;
     
     my %profile;
-    $profile{string_type} = _string_type(@word_types);
+    ( $profile{string}, $profile{string_type} ) = _string_type(@word_types);
     
     for (my $i = 0; $i <= $#words; $i++) {
         push @{$profile{words}}, {
@@ -291,17 +291,21 @@ sub _string_type {
     my $types_str = join "", map { $types{$_} } grep { $_ ne 'excluded' } @types;
     
     # remove 'other' word types
-    $types_str =~ s/4//g;
+    my $clean_str = $types_str;
+    $clean_str =~ s/o//g;
     
-    if ($types_str =~ /^13*$/) {
-        return '1st_uc';
-    } elsif ($types_str =~ /^2+$/) {
-        return 'all_uc';
-    } elsif ($types_str =~ /^3+$/) {
-        return 'all_lc';
+    my $string_type;
+    if ($clean_str =~ /^fl*$/) {
+        $string_type = '1st_uc';
+    } elsif ($clean_str =~ /^u+$/) {
+        $string_type = 'all_uc';
+    } elsif ($clean_str =~ /^l+$/) {
+        $string_type = 'all_lc';
     } else {
-        return 'other';
+        $string_type = 'other';
     }
+    
+    return ($types_str, $string_type);
 }
 
 
@@ -330,7 +334,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.09 - June 20, 2008
+Version 0.10 - November 1, 2008
 
 =head1 SYNOPSIS
 
@@ -355,6 +359,7 @@ Version 0.09 - June 20, 2008
     my %ref_profile = get_profile($reference_string);
     
     my $string_type = $ref_profile{string_type};
+    my $profile_str = $ref_profile{string};           # 'fll'
     my $word        = $ref_profile{words}[2]->{word}; # third word
     my $word_type   = $ref_profile{words}[2]->{type};
     
@@ -452,6 +457,29 @@ The keys of the returned hash are the following:
 
 Scalar containing the string type, if it can be determined; otherwise,
 its value is 'other'.
+
+=item * C<string>
+
+Pattern string created by mapping each word type to a single-letter code:
+
+    1st_uc => 'f'
+    all_uc => 'u'
+    all_lc => 'l'
+    other  => 'o'
+
+
+For instance, the patterns of the common types are:
+
+    1st_uc:  ^fl*$
+    all_uc:  ^u+$
+    all_lc:  ^l+$
+
+This feature can be useful to process 'other' string types using regular expressions.
+E.g., you can use it to detect title case strings:
+
+    if ( $profile{string} =~ /^f[fl]*f$/ ) {
+        # some code here
+    }
 
 =item * C<words>
 
@@ -717,6 +745,7 @@ Lingua::EN::Titlecase
 
 Text::Capitalize
 
+L<http://en.wikipedia.org/wiki/Capitalization>
 
 =head1 ACKNOWLEDGEMENTS
 
@@ -728,7 +757,7 @@ Enrique Nell, E<lt>perl_nell@telefonica.netE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2007-2008 by Enrique Nell.
+Copyright (C) 2007-2008 by Enrique Nell, all rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -15,7 +15,7 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 
 our $word_re =  qr{
@@ -59,7 +59,7 @@ sub get_profile {
                          } @words;
     
     my %profile;
-    ( $profile{string}, $profile{string_type} ) = _string_type(@word_types);
+    ( $profile{fold}, $profile{string_type} ) = _string_type(@word_types);
     
     for (my $i = 0; $i <= $#words; $i++) {
         push @{$profile{words}}, {
@@ -334,7 +334,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.10 - November 1, 2008
+Version 0.11 - November 1, 2008
 
 =head1 SYNOPSIS
 
@@ -359,7 +359,7 @@ Version 0.10 - November 1, 2008
     my %ref_profile = get_profile($reference_string);
     
     my $string_type = $ref_profile{string_type};
-    my $profile_str = $ref_profile{string};           # 'fll'
+    my $profile_str = $ref_profile{fold};             # 'fll'
     my $word        = $ref_profile{words}[2]->{word}; # third word
     my $word_type   = $ref_profile{words}[2]->{type};
     
@@ -458,7 +458,7 @@ The keys of the returned hash are the following:
 Scalar containing the string type, if it can be determined; otherwise,
 its value is 'other'.
 
-=item * C<string>
+=item * C<fold>
 
 Pattern string created by mapping each word type to a single-letter code:
 
@@ -475,7 +475,7 @@ For instance, the patterns of the common types are:
     all_lc:  ^l+$
 
 This feature can be useful to process 'other' string types using regular expressions.
-E.g., you can use it to detect title case strings:
+E.g., you can use it to detect (probable) title case strings:
 
     if ( $profile{string} =~ /^f[fl]*f$/ ) {
         # some code here

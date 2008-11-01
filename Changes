@@ -1,5 +1,10 @@
 Revision history for Perl extension String::CaseProfile.
 
+0.11  November 1, 2008
+
+    * Changed the name of the new 'string' key (introduced in version 0.10)
+      of the profile hash to 'fold', for clarity.
+
 0.10  November 1, 2008
 
     * Added a 'string' key to the profile hash returned by get_profile.

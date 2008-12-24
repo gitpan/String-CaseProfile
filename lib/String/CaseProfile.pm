@@ -15,7 +15,7 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 
 our $word_re =  qr{
@@ -49,14 +49,33 @@ sub get_profile {
     }
     
     my @words = $string =~ /($word_re)/g;
-    my @word_types = map {
+    
+    my @word_types;
+    if ( @words == 1 && length $words[0] == 1 ) {
+        
+        if ($words[0] =~ /^\p{Lu}$/) {
+            
+            push @word_types, 'all_uc';
+            
+        } elsif ($words[0] =~ /^\p{Ll}$/) {
+            
+            push @word_types, 'all_lc';
+        } else {
+            
+            push @word_types, 'other';
+        }
+        
+    } else {
+        @word_types = map {
+            
                             _exclude($_, \%excluded)
                             ?
                             'excluded'
                             :
                             _word_type($_)
                             
-                         } @words;
+                          } @words;
+    }
     
     my %profile;
     ( $profile{fold}, $profile{string_type} ) = _string_type(@word_types);
@@ -334,7 +353,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.12 - November 1, 2008
+Version 0.13 - December 24, 2008
 
 =head1 SYNOPSIS
 
@@ -636,7 +655,8 @@ its lowercase version, 'mp3', won't be excluded unless you add it to the list).
 
 
 
-    # MORE EXAMPLES EXCLUDING WORDS
+More examples, excluding words
+
     
     # A second batch of sample strings
     @strings = (

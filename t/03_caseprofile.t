@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 24;
+use Test::More tests => 27;
 
 use String::CaseProfile qw(get_profile set_profile copy_profile);
 use Encode;
@@ -107,6 +107,18 @@ my %bad_profile3 = ( custom => {
 $new_string = set_profile($samples[0], %bad_profile3);
 is($new_string, $samples[0], 'Unchanged string');
 
+# Single-letter strings
 
+my @single = qw(a Ñ 1);
+my @results = qw(all_lc all_uc other);
+
+for (my $i = 0; $i<=$#single; $i++) {
+    my %profile = get_profile($single[$i]);
+    is(
+       $profile{string_type},
+       $results[$i],
+       "Expected $results[$i], but $single[$i] is $profile{string_type}"
+      ); 
+}
 
 

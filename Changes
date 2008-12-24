@@ -1,4 +1,11 @@
-Revision history for Perl extension String::CaseProfile.
+Revision history for Perl extension String::CaseProfile
+
+0.13  December 24, 2008
+
+    * Fixed a bug in get_profile to cover the case where the source string
+      only contains a single-letter word.
+    * Added some tests.
+    * Minor doc changes.
 
 0.12  November 1, 2008
 

@@ -15,7 +15,7 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 
 our $word_re =  qr{
@@ -60,12 +60,14 @@ sub get_profile {
         } elsif ($words[0] =~ /^\p{Ll}$/) {
             
             push @word_types, 'all_lc';
+            
         } else {
             
             push @word_types, 'other';
         }
         
     } else {
+        
         @word_types = map {
             
                             _exclude($_, \%excluded)
@@ -75,6 +77,7 @@ sub get_profile {
                             _word_type($_)
                             
                           } @words;
+        
     }
     
     my %profile;
@@ -86,6 +89,8 @@ sub get_profile {
                                     type => $word_types[$i],
                                  }
     }
+    
+    $profile{report} = _create_report($string, \%profile);
     
     return %profile;
 }
@@ -103,6 +108,24 @@ sub _exclude {
     } else {
         return 0;
     }
+}
+
+sub _create_report {
+    my ($string, $prof_href) = @_;
+    
+    my %prof = %{$prof_href};
+    
+    my $report;
+    $report .= "String:  $string\n";
+    $report .= "Type:    $prof{string_type}\n";
+    $report .= "Pattern: $prof{fold}\n\n";
+    $report .= "Word                Type\n--------------------------\n";
+    for ( my $i = 0; $i < scalar(@{$prof{words}}); $i++ ) {
+        $report .= sprintf "%-20s%-20s\n", $prof{words}[$i]->{word},
+                                           $prof{words}[$i]->{type};
+    }
+    
+    return $report;
 }
 
 
@@ -353,7 +376,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.13 - December 24, 2008
+Version 0.14 - January 10, 2009
 
 =head1 SYNOPSIS
 
@@ -373,8 +396,7 @@ Version 0.13 - December 24, 2008
                                     );
     
     
-    # Get the profile of a string, access the details, 
-    # and apply it to another string
+    # Get the profile of a string and access the details
     my %ref_profile = get_profile($reference_string);
     
     my $string_type = $ref_profile{string_type};
@@ -382,6 +404,10 @@ Version 0.13 - December 24, 2008
     my $word        = $ref_profile{words}[2]->{word}; # third word
     my $word_type   = $ref_profile{words}[2]->{type};
     
+    # See a profile report
+    print "$ref_profile{report}";        # No need to add \n
+    
+    # Apply the profile to another string
     my $new_string  = set_profile($string, %ref_profile);
     
     
@@ -504,6 +530,10 @@ E.g., you can use it to detect (probable) title case strings:
 
 Reference to an array containing a hash for every word in the string.
 Each hash has two keys: B<word> and B<type>.
+
+=item * C<report>
+
+Returns a string containing a summary of the string profile.
 
 =back
 
@@ -655,7 +685,7 @@ its lowercase version, 'mp3', won't be excluded unless you add it to the list).
 
 
 
-More examples, excluding words
+More examples, this time excluding words:
 
     
     # A second batch of sample strings
@@ -777,7 +807,7 @@ Enrique Nell, E<lt>perl_nell@telefonica.netE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2007-2008 by Enrique Nell, all rights reserved.
+Copyright (C) 2007-2009 by Enrique Nell, all rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

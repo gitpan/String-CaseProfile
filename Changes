@@ -1,5 +1,12 @@
 Revision history for Perl extension String::CaseProfile
 
+0.14  January 10, 2009
+
+    * Added the 'report' key to the profile hash returned by get_profile,
+      so the user can print a summary of the string profile to get the picture
+      at a glance.
+    * Updated the documentation.
+
 0.13  December 24, 2008
 
     * Fixed a bug in get_profile to cover the case where the source string

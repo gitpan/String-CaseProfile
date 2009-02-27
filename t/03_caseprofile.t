@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 27;
+use Test::More tests => 33;
 
 use String::CaseProfile qw(get_profile set_profile copy_profile);
 use Encode;
@@ -15,6 +15,8 @@ my @strings = (
                 'dir-se-ia que era bom',
                 'Cadena de prueba KT31',
                 'identificador some_ID',
+                'AC/DC strikes back',
+                'vacaciones en EE.UU.'
               );
 
 # encode strings as utf-8
@@ -107,6 +109,7 @@ my %bad_profile3 = ( custom => {
 $new_string = set_profile($samples[0], %bad_profile3);
 is($new_string, $samples[0], 'Unchanged string');
 
+
 # Single-letter strings
 
 my @single = qw(a Ñ 1);
@@ -121,4 +124,15 @@ for (my $i = 0; $i<=$#single; $i++) {
       ); 
 }
 
+# Acronyms
+%profile = get_profile($samples[7]);
 
+is(@{$profile{words}}, 3, 'String contains 3 words');
+is($profile{words}[0]->{word}, 'AC/DC', 'First word is AC/DC');
+is($profile{words}[0]->{type}, 'other', 'The type of the first word is other');
+
+%profile = get_profile($samples[8]);
+
+is(@{$profile{words}}, 3, 'String contains 3 words');
+is($profile{words}[2]->{word}, 'EE.UU.', 'Third word is EE.UU.');
+is($profile{words}[2]->{type}, 'other', 'The type of the third word is other');

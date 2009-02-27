@@ -15,10 +15,14 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 
 our $word_re =  qr{
+                    \b(?:\p{Lu}{1,2}\.)+(?:\P{L}|$)
+                    |
+                    \b\p{Lu}{1,2}\/\p{Lu}{1,2}\b
+                    |
                     (?:
                         \p{L}
                         |
@@ -376,7 +380,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.14 - January 10, 2009
+Version 0.15 - February 27, 2009
 
 =head1 SYNOPSIS
 

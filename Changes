@@ -1,5 +1,11 @@
 Revision history for Perl extension String::CaseProfile
 
+0.15  February 27, 2009
+
+    * Modified the word detection regular expression to cover some types of
+      acronyms.
+    * Added more tests.
+
 0.14  January 10, 2009
 
     * Added the 'report' key to the profile hash returned by get_profile,

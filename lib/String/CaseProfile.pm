@@ -15,10 +15,10 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ( 'all' => [ @EXPORT_OK ] );
 
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
 
-our $word_re =  qr{
+my $word_re =  qr{
                     \b(?:\p{Lu}{1,2}\.)+(?:\P{L}|$)
                     |
                     \b\p{Lu}{1,2}\/\p{Lu}{1,2}\b
@@ -26,16 +26,16 @@ our $word_re =  qr{
                     (?:
                         \p{L}
                         |
-                        (?<=\p{L})[-'\x92_](?=\p{L})
+                        (?<=\p{L})[-'\x92_&](?=\p{L})
                         |
                         (?<=[lL])\xB7(?=[lL])
                         |
                         \d
                     )+
-                  }x;
+                 }x;
 
 
-our %types = (
+my %types = (
                 '1st_uc' => 'f',
                 'all_uc' => 'u',
                 'all_lc' => 'l',
@@ -45,11 +45,29 @@ our %types = (
 
 sub get_profile {
     my $string = shift;
+    
+    my (@excluded, $strict);
+    
+    if (ref $_[0] eq 'HASH') {
+        
+        if ($_[0]->{exclude}) {
+            @excluded = @{$_[0]->{exclude}};
+        }
+        
+        $strict   = $_[0]->{strict};
+        
+    } else {
+        
+        if ( defined $_[0] ) {
+            @excluded = @{ $_[0]} ;
+        }
+        
+    }
 
     # read excluded words, if any
     my %excluded;
-    if ($_[0]) {
-        $excluded{$_}++ foreach (@{$_[0]});
+    if ( @excluded > 0 ) {
+        $excluded{$_}++ foreach ( @excluded );
     }
     
     my @words = $string =~ /($word_re)/g;
@@ -85,7 +103,7 @@ sub get_profile {
     }
     
     my %profile;
-    ( $profile{fold}, $profile{string_type} ) = _string_type(@word_types);
+    ( $profile{fold}, $profile{string_type} ) = _string_type($strict, @word_types);
     
     for (my $i = 0; $i <= $#words; $i++) {
         push @{$profile{words}}, {
@@ -152,7 +170,7 @@ sub set_profile {
         } elsif ($ref_string_type eq 'other') {
             return $string;
         } else {
-            carp "\nIllegal value of string_type";
+            carp "Illegal value of string_type";
         }
     }
     
@@ -210,7 +228,7 @@ sub set_profile {
             if ($types{$type} && $types{$type} ne 'other') {
                 $default_type = $type;
             } else {
-                carp "\nIllegal default value in custom profile";
+                carp "Illegal default value in custom profile";
             }
         }
         
@@ -284,31 +302,46 @@ sub set_profile {
 sub copy_profile {
     my %options = @_;
     
-    if ( $options{from} && $options{to} ) {
-        if ( $options{exclude} ) {
-            my %ref_profile = get_profile(
-                                          $options{from},
-                                          $options{exclude},
+    my $from    = $options{from};
+    my $to      = $options{to};
+    my $strict  = $options{strict};
+    my $exclude = $options{exclude};
+    
+    if ( $from && $to ) {
+        
+        if ( $exclude || $strict ) {
+            
+            my %ref_profile = get_profile( $from, {
+                                                   exclude => $exclude,
+                                                   strict => $strict
+                                                  }
                                          );
             
-            $ref_profile{exclude} = $options{exclude};
+            $ref_profile{exclude} = $exclude;
             
-            return set_profile(
-                                $options{to},
-                                %ref_profile,
-                              );
+            return set_profile( $to, %ref_profile );
+            
         } else {
+            
             return set_profile($options{to}, get_profile($options{from}));
+            
         }
-    } elsif ( !$options{from} && !$options{to} ) {
+        
+    } elsif ( !$from && !$to ) {
+        
         carp "Missing parameters\n";
         return '';
-    } elsif ( !$options{from} ) {
+        
+    } elsif ( !$from ) {
+        
         carp "Missing reference string\n";
-        return $options{to};
+        return $to;
+        
     } else {
+        
         carp "Missing target string\n";
         return '';
+        
     }
 }
 
@@ -332,17 +365,20 @@ sub _word_type {
 
 
 sub _string_type {
+    
+    my $strict = shift;
     my @types = @_;
     
     my $types_str = join "", map { $types{$_} } grep { $_ ne 'excluded' } @types;
     
     # remove 'other' word types
     my $clean_str = $types_str;
-    $clean_str =~ s/o//g;
+    $clean_str =~ s/o//g unless $strict;
     
     my $string_type;
-    if ($clean_str =~ /^fl*$/) {
-        $string_type = '1st_uc';
+    
+    if ($clean_str =~ /^fl*$/) {    
+        $string_type = '1st_uc';        
     } elsif ($clean_str =~ /^u+$/) {
         $string_type = 'all_uc';
     } elsif ($clean_str =~ /^l+$/) {
@@ -380,7 +416,7 @@ String::CaseProfile - Get/Set the letter case profile of a string
 
 =head1 VERSION
 
-Version 0.15 - February 27, 2009
+Version 0.16 - February 7, 2010
 
 =head1 SYNOPSIS
 
@@ -487,16 +523,38 @@ string containing several alternate types in string context.)
 
 =head1 FUNCTIONS
 
+
+B<WARNING:> The syntax of the B<get_profile> function changed slightly in v0.16.
+The old syntax (see L<http://search.cpan.org/~enell/String-CaseProfile-0.15/lib/String/CaseProfile.pm>)
+still works, but eventually it will be deprecated. 
+
+
 =over 4
 
-=item C<get_profile($string, [ $excluded ])>
+=item C<get_profile( $string, { exclude =E<gt> $excluded, strict =E<gt> $strict } )>
 
-Returns a hash containing the profile details for $string. The string provided
-must be encoded as B<utf8>.
+Returns a hash containing the profile details for $string.
 
-$excluded is an optional parameter containing a reference to a list of terms that
-should not be considered when determining the profile of $string (e.g., the word
-"Internet" in some cases, or the first person personal pronoun in English, "I").
+The string provided must be encoded as B<utf8>. This is the only required parameter.
+
+You can also specify a hash reference containing any of the following optional
+parameters:
+
+=over 4
+
+=item * C<exclude>
+
+A reference to a list of terms that should not be considered when determining
+the profile of $string (e.g., the word "Internet" in some cases, or
+the first person personal pronoun in English, "I").
+
+=item * C<strict>
+
+A parameter that you can set to to a true value if you want to consider
+'Other'-type words when determining the string type.
+By default, this parameter is set to false.
+
+=back
 
 The keys of the returned hash are the following:
 
@@ -545,7 +603,7 @@ Returns a string containing a summary of the string profile.
 
 =over 4
 
-=item C<set_profile($string, %profile)>
+=item C<set_profile( $string, %profile )>
 
 Applies %profile to $string and returns a new string. $string must be encoded
 as B<utf8>. The profile configuration parameters (hash keys) are the following:
@@ -596,6 +654,7 @@ and the target string:
                     from    => $source,
                     to      => $target,
                     exclude => $array_ref,
+                    strict  => $strict,
                 );
 
 This is just a convenience function. If C<copy_profile> cannot determine
@@ -626,7 +685,7 @@ its lowercase version, 'mp3', won't be excluded unless you add it to the list).
     
     my @strings = (
                     'Entorno de tiempo de ejecución',
-                    'è un linguaggio veloce',
+                    'è un linguaggio dinamico',
                     'langages dérivés du C',
                   );
 
@@ -639,7 +698,7 @@ its lowercase version, 'mp3', won't be excluded unless you add it to the list).
 
     # EXAMPLE 1: Get the profile of a string
     
-    my %profile = get_profile($samples[0]);
+    my %profile = get_profile( $samples[0] );
 
     print "$profile{string_type}\n";   # prints '1st_uc'
     my @types = $profile{string_type}; # 1st_uc all_lc all_lc all_lc all_lc
@@ -652,11 +711,11 @@ its lowercase version, 'mp3', won't be excluded unless you add it to the list).
     my $ref_string1 = 'REFERENCE STRING';
     my $ref_string2 = 'Another reference string';
 
-    $new_string = set_profile( $samples[1], get_profile($ref_string1) );
-    # The current value of $new_string is 'È UN LINGUAGGIO VELOCE'
+    $new_string = set_profile( $samples[1], get_profile( $ref_string1 ) );
+    # The current value of $new_string is 'È UN LINGUAGGIO DINAMICO'
 
-    $new_string = set_profile( $samples[1], get_profile($ref_string2) );
-    # Now it's 'È un linguaggio veloce'
+    $new_string = set_profile( $samples[1], get_profile( $ref_string2 ) );
+    # Now it's 'È un linguaggio dinamico'
     
     # Alternative, using copy_profile
     $new_string = copy_profile( from => $ref_string1, to => $samples[1] );
@@ -667,10 +726,12 @@ its lowercase version, 'mp3', won't be excluded unless you add it to the list).
     # EXAMPLE 3: Change a string using several custom profiles
 
     my %profile1 = ( string_type  => 'all_uc' );
+    
     $new_string = set_profile( $samples[2], %profile1 );
     # $new_string is 'LANGAGES DÉRIVÉS DU C'
     
     my %profile2 = ( string_type => 'all_lc', force_change => 1 );
+    
     $new_string = set_profile( $samples[2], %profile2 );
     # $new_string is 'langages dérivés du c'
     
@@ -680,10 +741,12 @@ its lowercase version, 'mp3', won't be excluded unless you add it to the list).
                                 index   => { '1'  => 'all_uc' }, # 2nd word
                                }
                    );
+    
     $new_string = set_profile( $samples[2], %profile3 );
     # $new_string is 'langages DÉRIVÉS du C'
 
     my %profile4 = ( custom => { all_lc => '1st_uc' } );
+    
     $new_string = set_profile( $samples[2], %profile4 );
     # $new_string is 'Langages Dérivés Du C'
 
@@ -709,7 +772,7 @@ More examples, this time excluding words:
     # EXAMPLE 4: Get the profile of a string excluding the word 'Internet'
     #            and apply it to another string
 
-    my %profile = get_profile($samples[0], ['Internet']);
+    my %profile = get_profile( $samples[0], { exclude => ['Internet'], } );
 
     print "$profile{string_type}\n";      # prints  'all_lc'
     print "$profile{words}[2]->{word}\n"; # prints 'Internet'
@@ -717,7 +780,8 @@ More examples, this time excluding words:
 
     # Set this profile to $samples[1], excluding the word 'Internet'
     $profile{exclude} = ['Internet'];
-    $new_string = set_profile($samples[1], %profile);
+    
+    $new_string = set_profile( $samples[1], %profile );
 
     print "$new_string\n"; # prints "an Internet-based application", preserving
                            # the case of the 'Internet-based' compound word
@@ -728,7 +792,8 @@ More examples, this time excluding words:
     #            to 'all_uc'
 
     %profile = ( string_type => 'all_uc', exclude => ['Internet'] );
-    $new_string = set_profile($samples[0], %profile);
+    
+    $new_string = set_profile( $samples[0], %profile );
     
     print "$new_string\n";   # prints 'CONEXIÓN A INTERNET', as expected, since
                              # the case profile of a excluded word is not preserved
@@ -740,7 +805,8 @@ More examples, this time excluding words:
     #            excluded word to 'all_lc'
     
     %profile = ( string_type => 'all_lc', exclude => ['ABS'] );
-    $new_string = set_profile($samples[2], %profile);
+    
+    $new_string = set_profile( $samples[2], %profile );
 
     print "$new_string\n";   # prints 'the ABS module', preserving the 
                              # excluded word case profile
@@ -751,8 +817,8 @@ More examples, this time excluding words:
     #            using the copy_profile function
 
     $new_string = copy_profile(
-                                from => $samples[3],
-                                to   => $samples[4],
+                                from    => $samples[3],
+                                to      => $samples[4],
                                 exclude => ['I'],
                               );
 
@@ -770,7 +836,7 @@ More examples, this time excluding words:
                     exclude => ['ABS'],
                );
 
-    $new_string = set_profile($samples[2], %profile);
+    $new_string = set_profile( $samples[2], %profile );
     print "$new_string\n";  # prints 'The ABS Module'
 
 
@@ -807,14 +873,53 @@ Many thanks to Xavier Noria for wise suggestions.
 
 =head1 AUTHOR
 
-Enrique Nell, E<lt>perl_nell@telefonica.netE<gt>
+Enrique Nell, E<lt>blas.gordon@gmail.comE<gt>
+
+
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-string-caseprofile at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=String-CaseProfile>.  I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc String::CaseProfile
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=String-CaseProfile>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/String-CaseProfile>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/String-CaseProfile>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/String-CaseProfile/>
+
+=back
+
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2007-2009 by Enrique Nell, all rights reserved.
+Copyright (C) 2007-2010 by Enrique Nell, all rights reserved.
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+This program is free software; you can redistribute it and/or modify it
+under the terms of either: the GNU General Public License as published
+by the Free Software Foundation; or the Artistic License.
 
 
 =cut

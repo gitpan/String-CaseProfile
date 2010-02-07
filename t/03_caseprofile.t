@@ -2,16 +2,17 @@
 use strict;
 use warnings;
 
-use Test::More tests => 33;
+use Test::More tests => 35;
+use Test::Warn;
 
 use String::CaseProfile qw(get_profile set_profile copy_profile);
 use Encode;
 
 my @strings = (
                 'Entorno de tiempo de ejecución',
-                'è un linguaggio veloce',
+                'è un linguaggio dinamico',
                 'langages dérivés du C',
-                'sil·labaris, l’altre sistema d’escriptura japonès',
+                "sil·labaris, l'altre sistema d'escriptura japonès",
                 'dir-se-ia que era bom',
                 'Cadena de prueba KT31',
                 'identificador some_ID',
@@ -21,6 +22,7 @@ my @strings = (
 
 # encode strings as utf-8
 my @samples = map { decode('iso-8859-1', $_) } @strings;
+
 
 my $new_string;
 
@@ -56,17 +58,17 @@ my $ref_string1 = 'REFERENCE STRING';
 my $ref_string2 = 'Another reference string';
 
 $new_string = set_profile($samples[1], get_profile($ref_string1));
-is($new_string, 'È UN LINGUAGGIO VELOCE', 'È UN LINGUAGGIO VELOCE');
+is($new_string, 'È UN LINGUAGGIO DINAMICO', 'È UN LINGUAGGIO DINAMICO');
 
 $new_string = set_profile($samples[1], get_profile($ref_string2));
-is($new_string, 'È un linguaggio veloce', 'È un linguaggio veloce');
+is($new_string, 'È un linguaggio dinamico', 'È un linguaggio dinamico');
 
 # Using the copy_profile function
 $new_string = copy_profile(from => $ref_string1, to => $samples[1]);
-is($new_string, 'È UN LINGUAGGIO VELOCE', 'È UN LINGUAGGIO VELOCE');
+is($new_string, 'È UN LINGUAGGIO DINAMICO', 'È UN LINGUAGGIO DINAMICO');
 
 $new_string = copy_profile(from => $ref_string2, to => $samples[1]);
-is($new_string, 'È un linguaggio veloce', 'È un linguaggio veloce');
+is($new_string, 'È un linguaggio dinamico', 'È un linguaggio dinamico');
 
 
 # EXAMPLE 3: Change a string using several custom profiles
@@ -94,11 +96,16 @@ is($new_string, 'Langages Dérivés Du C', 'Langages Dérivés Du C');
 
 # Validation tests
 my %bad_profile1 = get_profile(1);
-$new_string = set_profile($samples[0], %bad_profile1);
+#warning_is  {
+               $new_string = set_profile($samples[0], %bad_profile1);
+#            }  "Illegal value of string_type", "Bad string type";
+
 is($new_string, $samples[0], 'Unchanged string');
 
 my %bad_profile2 = ( string_type => 'bad' );
-$new_string = set_profile( $samples[0], %bad_profile2);
+warning_like  {
+               $new_string = set_profile($samples[0], %bad_profile2);
+              }  qr/Illegal value/, "Bad string type";
 is($new_string, $samples[0], 'Unchanged string');
 
 my %bad_profile3 = ( custom => {
@@ -106,7 +113,9 @@ my %bad_profile3 = ( custom => {
                                 default => 'bogus',
                            }
                );
-$new_string = set_profile($samples[0], %bad_profile3);
+warning_like  {
+               $new_string = set_profile($samples[0], %bad_profile3);
+            }  qr/Illegal default value/, "Illegal default value in custom profile";
 is($new_string, $samples[0], 'Unchanged string');
 
 

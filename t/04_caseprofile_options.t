@@ -5,11 +5,12 @@ use warnings;
 use Test::More tests => 23;
 
 use String::CaseProfile qw(get_profile set_profile copy_profile);
-use Encode;
+#use Encode;
+use utf8;
 
 
 my @strings = (
-                'conexión a Internet',
+                'conexiÃ³n a Internet',
                 'An Internet-based application',
                 'THE ABS MODULE',
                 'Yes, I think so',
@@ -17,9 +18,9 @@ my @strings = (
                 'Released by AT&T',
               );
 
-# encode strings as utf-8
-my @samples = map { decode('iso-8859-1', $_) } @strings;
-
+# encode strings as utf-8 -changed the encoding of the file to utf-8; step skipped
+# my @samples = map { decode('iso-8859-1', $_) } @strings;
+my @samples = @strings;
 
 my $new_string;
 my %profile;
@@ -56,7 +57,7 @@ is($new_string, 'an Internet-based application',
 %profile = ( string_type => 'all_uc', exclude => ['Internet'] );
 $new_string = set_profile($samples[0], %profile);
 
-is($new_string, 'CONEXIÓN A INTERNET',
+is($new_string, 'CONEXIÃ“N A INTERNET',
                 'All words are uppercase, even the excluded ones');
 
 
